@@ -103,7 +103,7 @@
             script = ''
               gradle installDist test --write-locks
               update_script=$(nix build .#default.mitmCache.updateScript --no-link --print-out-paths)
-              "$update_script"
+              USE_BWRAP=0 "$update_script"
               oxfmt --write deps.json
             '';
             packages = with pkgs; [
