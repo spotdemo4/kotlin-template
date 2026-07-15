@@ -164,7 +164,17 @@
                 cp -R build/install/kotlin-template/. "$out"
                 wrapProgram "$out/bin/kotlin-template" \
                   --set JAVA_HOME "${pkgs.jdk25}" \
-                  --prefix PATH : "${makeBinPath [ pkgs.jdk25 ]}"
+                  --prefix PATH : "${
+                    makeBinPath (
+                      with pkgs;
+                      [
+                        coreutils
+                        findutils
+                        gnused
+                        jdk25
+                      ]
+                    )
+                  }"
 
                 runHook postInstall
               '';
