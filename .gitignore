@@ -1,0 +1,18 @@
+/.env
+/.envrc
+/docker-compose*
+
+# agents
+.agents/
+.claude/
+.codex/
+
+# nix
+/result*
+/.direnv/
+
+# gradle
+/.gradle/
+/.kotlin/
+/build/
+/out/

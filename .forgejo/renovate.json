@@ -1,0 +1,55 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-global-schema.json",
+
+  // self-hosted
+  "onboarding": false,
+  "requireConfig": "ignored",
+  "platform": "forgejo",
+  "endpoint": "https://trev.zip/api/v1",
+  "repositories": ["template/kotlin"],
+  "allowedCommands": ["^gradle installDist test --write-locks$", "^nix run \\.#update-deps$"],
+
+  // repository
+  "extends": ["config:recommended"],
+  "addLabels": ["dep"],
+  "nix": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["* * * * 0"], // sunday
+    "skipInstalls": false,
+    "postUpgradeTasks": {
+      "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+      "executionMode": "branch"
+    }
+  },
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    },
+    {
+      "matchManagers": ["nix"],
+      "addLabels": ["nix"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["actions"]
+    },
+    {
+      "matchManagers": ["gradle"],
+      "addLabels": ["kotlin"],
+      "postUpgradeTasks": {
+        "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+        "executionMode": "branch"
+      }
+    },
+    {
+      "matchManagers": ["gradle"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "kotlin packages"
+    }
+  ]
+}

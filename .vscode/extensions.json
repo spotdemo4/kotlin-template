@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "jetbrains.kotlin",
+    "jnoortheen.nix-ide",
+    "oxc.oxc-vscode",
+    "tombi-toml.tombi"
+  ]
+}

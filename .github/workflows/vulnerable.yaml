@@ -1,0 +1,49 @@
+name: vulnerable
+
+on:
+  schedule:
+    - cron: "0 9 * * 0" # every Sunday at 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actions:
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Initialize
+        uses: spotdemo4/nix-init@a381c8e0765c98cb84fdc4a392eefd6c4db309a5 # v1.57.0
+        with:
+          shell: vulnerable
+
+      - name: Run zizmor
+        run: zizmor $(find .github/workflows -name "*.yaml")
+
+  nix:
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Initialize
+        uses: spotdemo4/nix-init@a381c8e0765c98cb84fdc4a392eefd6c4db309a5 # v1.57.0
+        with:
+          shell: vulnerable
+
+      - name: Run flake-checker
+        run: flake-checker -f
+
+  kotlin:
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Initialize
+        uses: spotdemo4/nix-init@a381c8e0765c98cb84fdc4a392eefd6c4db309a5 # v1.57.0
+        with:
+          shell: vulnerable
+
+      - name: Run OSV-Scanner
+        run: osv-scanner scan source -r .

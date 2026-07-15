@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-global-schema.json",
+
+  // self-hosted
+  "onboarding": false,
+  "requireConfig": "ignored",
+  "platform": "github",
+  "repositories": ["spotdemo4/kotlin-template"],
+  "allowedCommands": ["^gradle installDist test --write-locks$", "^nix run \\.#update-deps$"],
+
+  // repository
+  "extends": ["config:recommended"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["* * * * 0"], // sunday
+    "skipInstalls": false,
+    "postUpgradeTasks": {
+      "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+      "executionMode": "branch"
+    }
+  },
+  "nix": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    },
+    {
+      "matchManagers": ["nix"],
+      "groupName": "nix inputs"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    },
+    {
+      "matchManagers": ["gradle"],
+      "postUpgradeTasks": {
+        "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+        "executionMode": "branch"
+      }
+    },
+    {
+      "matchManagers": ["gradle"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "kotlin packages"
+    }
+  ]
+}
