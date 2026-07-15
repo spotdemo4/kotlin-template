@@ -7,7 +7,7 @@
   "platform": "forgejo",
   "endpoint": "https://trev.zip/api/v1",
   "repositories": ["template/kotlin"],
-  "allowedCommands": ["^gradle installDist test --write-locks$", "^nix run \\.#update-deps$"],
+  "allowedCommands": ["^nix run \\.#update-deps$"],
 
   // repository
   "extends": ["config:recommended"],
@@ -21,7 +21,7 @@
     "schedule": ["* * * * 0"], // sunday
     "skipInstalls": false,
     "postUpgradeTasks": {
-      "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+      "commands": ["nix run .#update-deps"],
       "executionMode": "branch"
     }
   },
@@ -42,7 +42,7 @@
       "matchManagers": ["gradle"],
       "addLabels": ["kotlin"],
       "postUpgradeTasks": {
-        "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+        "commands": ["nix run .#update-deps"],
         "executionMode": "branch"
       }
     },

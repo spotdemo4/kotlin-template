@@ -6,7 +6,7 @@
   "requireConfig": "ignored",
   "platform": "github",
   "repositories": ["spotdemo4/kotlin-template"],
-  "allowedCommands": ["^gradle installDist test --write-locks$", "^nix run \\.#update-deps$"],
+  "allowedCommands": ["^nix run \\.#update-deps$"],
 
   // repository
   "extends": ["config:recommended"],
@@ -16,7 +16,7 @@
     "schedule": ["* * * * 0"], // sunday
     "skipInstalls": false,
     "postUpgradeTasks": {
-      "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+      "commands": ["nix run .#update-deps"],
       "executionMode": "branch"
     }
   },
@@ -39,7 +39,7 @@
     {
       "matchManagers": ["gradle"],
       "postUpgradeTasks": {
-        "commands": ["gradle installDist test --write-locks", "nix run .#update-deps"],
+        "commands": ["nix run .#update-deps"],
         "executionMode": "branch"
       }
     },

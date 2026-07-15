@@ -84,29 +84,33 @@
         };
 
         # nix run [#...]
-        apps =
-          pkgs.mkApps {
-            dev = {
-              script = "gradle run";
-              packages = with pkgs; [
-                gradle_9
-                jdk25
-              ];
-            };
-            test = {
-              script = "gradle test";
-              packages = with pkgs; [
-                gradle_9
-                jdk25
-              ];
-            };
-          }
-          // {
-            update-deps = {
-              type = "app";
-              program = "${self.packages.${system}.default.mitmCache.updateScript}";
-            };
+        apps = pkgs.mkApps {
+          dev = {
+            script = "gradle run";
+            packages = with pkgs; [
+              gradle_9
+              jdk25
+            ];
           };
+          test = {
+            script = "gradle test";
+            packages = with pkgs; [
+              gradle_9
+              jdk25
+            ];
+          };
+          update-deps = {
+            script = ''
+              gradle installDist test --write-locks
+              update_script=$(nix build .#default.mitmCache.updateScript --no-link --print-out-paths)
+              "$update_script"
+            '';
+            packages = with pkgs; [
+              gradle_9
+              jdk25
+            ];
+          };
+        };
 
         # nix build [#...]
         packages = {
