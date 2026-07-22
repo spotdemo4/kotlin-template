@@ -38,18 +38,20 @@
               gradle_9
               jdk25
               kotlin-language-server
-
-              # lint
               ktlint
+
+              vscode-json-languageserver # json
+              yaml-language-server # yaml
+              tombi # toml
+              oxfmt # format
+
+              # nix
               nixd
               nil
-
-              # format
-              oxfmt
               nixfmt
-              treefmt
 
               # util
+              treefmt
               bumper
             ];
           };
