@@ -22,7 +22,7 @@ nix develop
 ### run
 
 ```sh
-nix run .#dev
+gradle run
 ```
 
 ### format

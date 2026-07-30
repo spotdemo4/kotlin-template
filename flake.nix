@@ -87,20 +87,6 @@
 
         # nix run [#...]
         apps = pkgs.mkApps {
-          dev = {
-            script = "gradle run";
-            packages = with pkgs; [
-              gradle_9
-              jdk25
-            ];
-          };
-          test = {
-            script = "gradle test";
-            packages = with pkgs; [
-              gradle_9
-              jdk25
-            ];
-          };
           update-deps = {
             script = ''
               gradle installDist test --write-locks
