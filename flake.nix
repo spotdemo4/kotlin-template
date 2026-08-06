@@ -124,7 +124,6 @@
               nativeBuildInputs = with pkgs; [
                 gradle_9
                 jdk25
-                ktlint
                 makeWrapper
               ];
 
@@ -139,10 +138,6 @@
               gradleCheckTask = "test";
               doCheck = true;
               doInstallCheck = pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform;
-
-              postCheck = ''
-                ktlint --relative . "src/**/*.kt" "*.gradle.kts"
-              '';
 
               installPhase = ''
                 runHook preInstall
@@ -212,6 +207,17 @@
         # nix flake check
         checks = pkgs.mkChecks {
           kotlin = self.packages.${system}.default;
+
+          ktlint = {
+            root = ./.;
+            filter = file: file.hasExt "kt" || file.hasExt "kts";
+            packages = with pkgs; [
+              ktlint
+            ];
+            script = ''
+              ktlint --relative . "src/**/*.kt" "*.gradle.kts"
+            '';
+          };
 
           nix = {
             root = ./.;
