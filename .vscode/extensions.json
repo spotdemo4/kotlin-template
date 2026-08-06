@@ -1,6 +1,6 @@
 {
   "recommendations": [
-    "fwcd.kotlin",
+    "jetbrains.kotlin-server",
     "jnoortheen.nix-ide",
     "oxc.oxc-vscode",
     "redhat.vscode-yaml",

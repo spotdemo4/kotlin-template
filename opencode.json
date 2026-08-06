@@ -4,8 +4,8 @@
     "kotlin-ls": {
       "disabled": true
     },
-    "kotlin-language-server": {
-      "command": ["kotlin-language-server"],
+    "kotlin-lsp": {
+      "command": ["kotlin-lsp", "--stdio"],
       "extensions": [".kt", ".kts"]
     },
     "json-ls": {

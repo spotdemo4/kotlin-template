@@ -37,7 +37,7 @@
               # kotlin
               gradle_9
               jdk25
-              kotlin-language-server
+              kotlin-lsp
               ktlint
 
               vscode-json-languageserver # json

@@ -7,6 +7,12 @@
     "Shell Script": [".envrc*"]
   },
   "lsp": {
+    "kotlin-lsp": {
+      "binary": {
+        "path": "kotlin-lsp",
+        "arguments": ["--stdio"]
+      }
+    },
     "nixd": {
       "settings": {
         "nixpkgs": {
@@ -29,11 +35,11 @@
   "languages": {
     "Kotlin": {
       "format_on_save": "on",
-      "language_servers": ["kotlin-language-server"],
+      "language_servers": ["kotlin-lsp"],
       "formatter": [
         {
           "language_server": {
-            "name": "kotlin-language-server"
+            "name": "kotlin-lsp"
           }
         }
       ]

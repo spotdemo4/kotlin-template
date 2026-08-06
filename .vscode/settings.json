@@ -20,10 +20,9 @@
     "https://models.dev/": true
   },
 
-  // fwcd.kotlin
-  "kotlin.languageServer.path": "kotlin-language-server",
+  // jetbrains.kotlin-server
   "[kotlin]": {
-    "editor.defaultFormatter": "fwcd.kotlin"
+    "editor.defaultFormatter": "jetbrains.kotlin-server"
   },
 
   // esbenp.prettier-vscode
