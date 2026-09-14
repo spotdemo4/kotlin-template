@@ -163,7 +163,7 @@
 
               installCheckPhase = ''
                 runHook preInstallCheck
-                test "$("$out/bin/kotlin-template")" = "Hello, World!"
+                test "$("$out/bin/kotlin-template")" = "Hello, world!"
                 runHook postInstallCheck
               '';
 

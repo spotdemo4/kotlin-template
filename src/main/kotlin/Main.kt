@@ -1,4 +1,4 @@
-fun hello(): String = "Hello, World!"
+fun hello(): String = "Hello, world!"
 
 fun main() {
     println(hello())
