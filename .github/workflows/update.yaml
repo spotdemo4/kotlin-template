@@ -26,5 +26,6 @@ jobs:
         run: renovate
         env:
           RENOVATE_CONFIG_FILE: .github/renovate.json
+          RENOVATE_EXECUTION_TIMEOUT: 45
           RENOVATE_TOKEN: ${{ steps.init.outputs.token }}
           LOG_LEVEL: ${{ runner.debug == '1' && 'debug' || 'info' }}
