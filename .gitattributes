@@ -1,6 +1,9 @@
 # Kotlin template - Git attributes
 # https://git-scm.com/docs/gitattributes
 
+# Linguist: exclude template initializer from language stats
+/init.sh -linguist-detectable
+
 # Linguist: Gradle lock files are generated
 flake.lock linguist-generated=true
 gradle.lockfile linguist-generated=true
