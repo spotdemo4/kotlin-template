@@ -108,7 +108,7 @@
           default = pkgs.stdenv.mkDerivation (
             final: with pkgs.lib; {
               pname = "kotlin-template";
-              version = "0.4.0";
+              version = "0.4.1";
 
               src = fileset.toSource {
                 root = ./.;
