@@ -10,6 +10,10 @@
 
   // repository
   "extends": ["config:recommended"],
+  "addLabels": ["dep"],
+  "nix": {
+    "enabled": true
+  },
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true,
@@ -20,9 +24,6 @@
       "executionMode": "branch"
     }
   },
-  "nix": {
-    "enabled": true
-  },
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
@@ -30,14 +31,15 @@
     },
     {
       "matchManagers": ["nix"],
-      "groupName": "nix inputs"
+      "addLabels": ["nix"]
     },
     {
       "matchManagers": ["github-actions"],
-      "groupName": "github actions"
+      "addLabels": ["actions"]
     },
     {
       "matchManagers": ["gradle"],
+      "addLabels": ["kotlin"],
       "postUpgradeTasks": {
         "commands": ["nix run .#update-deps"],
         "executionMode": "branch"
