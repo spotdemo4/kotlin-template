@@ -30,6 +30,8 @@ jobs:
         run: flake-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PACKAGES: |
+            packages.x86_64-linux.default
             appimages.x86_64-linux.default
             images.x86_64-linux.default

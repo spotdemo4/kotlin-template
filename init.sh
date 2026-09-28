@@ -177,6 +177,13 @@ old_description='kotlin template'
 old_url=https://trev.zip/template/kotlin
 replace_literal "$old_slug" "$slug" settings.gradle.kts flake.nix
 sed -i -E "s@^(version = \")[^\"]*@\1$version@" build.gradle.kts
+IFS=. read -ra host_parts <<<"${provider_host,,}"
+group=
+for ((i = ${#host_parts[@]} - 1; i >= 0; i--)); do
+  group+="${host_parts[i]}."
+done
+group+=${repo_path%%/*}
+sed -i -E "s@^(group = \")[^\"]*@\1${group,,}@" build.gradle.kts
 sed -i -E "/^[[:space:]]*pname = \"$slug\";$/,/^[[:space:]]*version = /s@^([[:space:]]*version = \")[^\"]*@\1$version@" flake.nix
 replace_literal "$old_description" "$nix_description" flake.nix
 replace_literal "$old_url" "$web_url" flake.nix

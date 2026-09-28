@@ -64,6 +64,8 @@
           release = pkgs.mkShell {
             packages = with pkgs; [
               flake-release
+              gradle_9
+              jdk25
             ];
           };
 
