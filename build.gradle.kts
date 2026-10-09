@@ -2,7 +2,7 @@ import org.gradle.api.artifacts.dsl.LockMode
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 
 plugins {
-    kotlin("jvm") version "2.4.20"
+    kotlin("jvm") version "2.4.21"
     application
     `maven-publish`
 }
