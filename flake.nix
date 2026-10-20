@@ -229,7 +229,7 @@
         checks = pkgs.mkChecks {
           kotlin = self.packages.${system}.default;
 
-          ktlint = {
+          kotlin-lint = {
             root = ./.;
             filter = file: file.hasExt "kt" || file.hasExt "kts";
             packages = with pkgs; [
