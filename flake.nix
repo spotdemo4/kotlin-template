@@ -93,12 +93,10 @@
               gradle installDist test --write-locks
               update_script=$(nix build .#default.mitmCache.updateScript --no-link --print-out-paths)
               USE_BWRAP=0 "$update_script"
-              oxfmt --write deps.json
             '';
             packages = with pkgs; [
               gradle_9
               jdk25
-              oxfmt
             ];
           };
         };
