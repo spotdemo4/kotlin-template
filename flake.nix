@@ -175,8 +175,13 @@
                 license = licenses.mit;
                 platforms = pkgs.jdk25.meta.platforms;
                 homepage = "https://trev.zip/template/kotlin";
-                changelog = "https://trev.zip/template/kotlin/releases";
-                downloadPage = "https://trev.zip/template/kotlin/releases/tag/v${final.version}";
+                downloadPage = "https://trev.zip/template/kotlin/releases";
+                changelog = "https://trev.zip/template/kotlin/releases/tag/v${final.version}";
+                sourceProvenance = with sourceTypes; [
+                  fromSource
+                  binaryBytecode
+                ];
+                maintainers = [ maintainers.spotdemo4 ];
               };
             }
           );
