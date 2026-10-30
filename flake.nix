@@ -139,7 +139,6 @@
               gradleUpdateTask = "installDist test";
               gradleCheckTask = "test";
               doCheck = true;
-              doInstallCheck = pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform;
 
               installPhase = ''
                 runHook preInstall
@@ -163,6 +162,7 @@
                 runHook postInstall
               '';
 
+              doInstallCheck = true;
               installCheckPhase = ''
                 runHook preInstallCheck
                 test "$("$out/bin/kotlin-template")" = "Hello, world!"
