@@ -207,29 +207,115 @@ if GIT_TERMINAL_PROMPT=0 git fetch --quiet --no-tags "$old_url" main 2>/dev/null
   done < <(git log --format='%T' HEAD)
 fi
 
-changes_started=true
-rm template.schema.json
-sed -i '/^        # nix flake init /,/^        };$/d' flake.nix
-if [[ -n $template_commit ]]; then
-  printf '{ "$schema": "%s", "url": "%s", "commit": "%s" }\n' \
-    "$old_url/raw/branch/main/template.schema.json" "$old_url" "$template_commit" >.template.json
-else
-  printf 'Warning: unable to find the template commit; .template.json was not created.\n' >&2
-fi
-
-replace_literal "$old_slug" "$slug" settings.gradle.kts flake.nix
-sed -i -E "s@^(version = \")[^\"]*@\1$version@" build.gradle.kts
 IFS=. read -ra host_parts <<<"${provider_host,,}"
 group=
 for ((i = ${#host_parts[@]} - 1; i >= 0; i--)); do
   group+="${host_parts[i]}."
 done
 group+=${repo_path%%/*}
-sed -i -E "s@^(group = \")[^\"]*@\1${group,,}@" build.gradle.kts
+group=${group,,}
+
+read -r -p 'Is this project a library? [y/N] ' reply || reply=
+if [[ $reply =~ ^[Yy]([Ee][Ss])?$ ]]; then
+  is_library=true
+  # Kotlin package names can't contain hyphens or be keywords, and ktlint
+  # rejects underscores
+  package=
+  IFS=. read -ra package_parts <<<"$group.$slug"
+  for part in "${package_parts[@]}"; do
+    part=${part//[^a-z0-9]/}
+    case $part in
+      '' | [0-9]* | abstract | as | assert | boolean | break | byte | case | catch | char | class | const | continue | default | do | double | else | enum | extends | false | final | finally | float | for | fun | goto | if | implements | import | in | instanceof | int | interface | is | long | native | new | null | object | package | private | protected | public | return | short | static | strictfp | super | switch | synchronized | this | throw | throws | transient | true | try | typealias | typeof | val | var | void | volatile | when | while)
+        printf 'Origin and title must produce a Kotlin package name without keywords or parts that are empty or begin with a digit.\n' >&2
+        exit 1
+        ;;
+    esac
+    package+=".$part"
+  done
+  package=${package#.}
+else
+  is_library=false
+fi
+
+changes_started=true
+rm template.schema.json
+sed -i '/^        # nix flake init /,/^        };$/d' flake.nix
+if [[ -n $template_commit ]]; then
+  library_field=
+  if $is_library; then
+    library_field=', "library": true'
+  fi
+  printf '{ "$schema": "%s", "url": "%s", "commit": "%s"%s }\n' \
+    "$old_url/raw/branch/main/template.schema.json" "$old_url" "$template_commit" "$library_field" >.template.json
+else
+  printf 'Warning: unable to find the template commit; .template.json was not created.\n' >&2
+fi
+
+replace_literal "$old_slug" "$slug" settings.gradle.kts flake.nix
+sed -i -E "s@^(version = \")[^\"]*@\1$version@" build.gradle.kts
+sed -i -E "s@^(group = \")[^\"]*@\1${group}@" build.gradle.kts
 sed -i -E "/^[[:space:]]*pname = \"$slug\";$/,/^[[:space:]]*version = /s@^([[:space:]]*version = \")[^\"]*@\1$version@" flake.nix
 replace_literal "$old_description" "$nix_description" flake.nix
 replace_literal "$old_url" "$web_url" flake.nix
 replace_literal 'Copyright (c) 2026 trev' "Copyright (c) $year $git_name" LICENSE
+
+if $is_library; then
+  # A library starts without the program.
+  rm src/main/kotlin/Main.kt src/test/kotlin/MainTest.kt
+  package_dir=${package//.//}
+  mkdir -p "src/main/kotlin/$package_dir" "src/test/kotlin/$package_dir"
+  cat >"src/main/kotlin/$package_dir/Hello.kt" <<EOF
+package $package
+
+/** Returns a greeting for [name]. */
+fun hello(name: String): String = "Hello, \$name!"
+EOF
+  cat >"src/test/kotlin/$package_dir/HelloTest.kt" <<EOF
+package $package
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class HelloTest {
+    @Test
+    fun returnsGreeting() {
+        assertEquals("Hello, world!", hello("world"))
+    }
+}
+EOF
+  sed -i -e 's/^    application$/    `java-library`/' -e '/^application {$/,/^$/d' build.gradle.kts
+
+  # There's no program to run, install or put in an image.
+  sed -i -e 's/^\( *gradleBuildTask = \)"installDist";$/\1"jar";/' \
+    -e 's/^\( *gradleUpdateTask = \)"installDist test";$/\1"jar test";/' \
+    -e 's/gradle installDist test --write-locks/gradle jar test --write-locks/' \
+    -e '/^                makeWrapper$/d' flake.nix
+  sed -i -e "/^              installPhase = ''\$/,/^              '';\$/{/^              '';\$/r /dev/stdin" -e 'd}' flake.nix <<'EOF'
+              installPhase = ''
+                runHook preInstall
+
+                mkdir -p "$out/share/java"
+                cp build/libs/*.jar "$out/share/java"
+
+                runHook postInstall
+              '';
+EOF
+  sed -i "/^              doInstallCheck = true;\$/,/^              '';\$/d" flake.nix
+  sed -i -E '/^                (mainProgram|downloadPage) = /d' flake.nix
+  sed -i '/^        # nix build #\(images\|appimages\)/,/^        };$/d' flake.nix
+  sed -i -e '/^### run$/,/^### format$/{/^### format$/!d}' -e 's/^gradle installDist$/gradle jar/' CONTRIBUTING.md
+
+  # flake-release publishes the Gradle package from the project's source, so
+  # only the package is released.
+  for workflow in .github/workflows/release.yaml .forgejo/workflows/release.yaml; do
+    if [[ -f $workflow ]]; then
+      sed -i -E '/^            (packages|appimages|images)\.x86_64-linux\.default$/d; s/^(          PACKAGES:) \|$/\1 packages.x86_64-linux.default/' "$workflow"
+    fi
+  done
+  if [[ -f .forgejo/workflows/release.yaml ]]; then
+    sed -i -E '/^          (CONTAINER_REGISTRY_PASSWORD|DELETE_OLD_RELEASE_ARTIFACTS): /d' .forgejo/workflows/release.yaml
+  fi
+fi
 
 if [[ ${provider_host,,} == github.com ]]; then
   is_github=true
@@ -248,16 +334,32 @@ encoded_lock_url="${raw_url}/flake.lock"
 encoded_lock_url=${encoded_lock_url//:/%253A}
 encoded_lock_url=${encoded_lock_url//\//%252F}
 nixpkgs_badge="[![nixpkgs](https://img.shields.io/endpoint?url=https%3A%2F%2Fnix-shield.trev.zip%2Fbadge%3Furl%3D${encoded_lock_url}%26input%3Dnixpkgs&logoColor=%23bac2de&labelColor=%23313244&color=%235277C3)](https://nixos.org/)"
-language_badge="[![kotlin](<https://img.shields.io/badge/dynamic/regex?url=${raw_url}/build.gradle.kts&search=kotlin%5C(%22jvm%22%5C)%20version%20%22(.*)%22&replace=%241&logo=kotlin&logoColor=%23bac2de&label=version&labelColor=%23313244&color=%237F52FF>)](https://kotlinlang.org/docs/releases.html)"
+if $is_library; then
+  # Libraries show the minimum JVM version they support.
+  language_badge="[![kotlin](<https://img.shields.io/badge/dynamic/regex?url=${raw_url}/build.gradle.kts&search=jvmToolchain%5C((.*)%5C)&replace=%3E%3D%241&logo=kotlin&logoColor=%23bac2de&label=jvm&labelColor=%23313244&color=%237F52FF>)](https://kotlinlang.org/docs/releases.html)"
+else
+  language_badge="[![kotlin](<https://img.shields.io/badge/dynamic/regex?url=${raw_url}/build.gradle.kts&search=kotlin%5C(%22jvm%22%5C)%20version%20%22(.*)%22&replace=%241&logo=kotlin&logoColor=%23bac2de&label=version&labelColor=%23313244&color=%237F52FF>)](https://kotlinlang.org/docs/releases.html)"
+fi
 
-readme_sections=$(sed -n '/^## using$/,$p' README.md)
-readme_sections=${readme_sections//"$old_url"/"$web_url"}
 if $is_github; then
   image="ghcr.io/${repo_path,,}:latest"
 else
   image="$host/${repo_path,,}:latest"
 fi
-readme_sections=${readme_sections//trev.zip\/template\/kotlin:latest/"$image"}
+if $is_library; then
+  readme_sections=$(sed -n '/^## contributing$/,$p' README.md)
+  if $is_github; then
+    printf -v maven_repository 'maven("https://maven.pkg.github.com/%s") {\n        credentials {\n            username = System.getenv("GITHUB_ACTOR")\n            password = System.getenv("GITHUB_TOKEN")\n        }\n    }' "$repo_path"
+  else
+    maven_repository="maven(\"${web_url%/"$repo_path"}/api/packages/${repo_path%%/*}/maven\")"
+  fi
+  printf -v readme_sections '## using\n\n```kotlin\nrepositories {\n    %s\n}\n\ndependencies {\n    implementation("%s:%s:latest.release")\n}\n```\n\n%s' \
+    "$maven_repository" "$group" "$slug" "$readme_sections"
+else
+  readme_sections=$(sed -n '/^## using$/,$p' README.md)
+  readme_sections=${readme_sections//"$old_url"/"$web_url"}
+  readme_sections=${readme_sections//trev.zip\/template\/kotlin:latest/"$image"}
+fi
 
 {
   printf '# %s\n\n' "$title"
