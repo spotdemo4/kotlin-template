@@ -243,6 +243,22 @@
             '';
           };
 
+          init = {
+            root = ./.;
+            packages = with pkgs; [
+              git
+              gradle_9
+              jdk25
+              jq
+              shellcheck
+              self.formatter.${system}
+            ];
+            script = ''
+              shellcheck init.sh init.test.sh
+              GRADLE_DEPS=${self.packages.${system}.default.mitmCache} bash init.test.sh
+            '';
+          };
+
           nix = {
             root = ./.;
             filter = file: file.hasExt "nix";
