@@ -394,6 +394,19 @@ EOF
   done
 }
 
+# Stops publishing the program to the package registry. flake-release
+# publishes discovered packages when PACKAGE_REGISTRY_TOKEN is set. GitHub
+# keeps packages: write to push the container image.
+unpublish_package() {
+  local workflow
+  sed -i -e '/^    `maven-publish`$/d' -e '/^publishing {$/,/^$/d' build.gradle.kts
+  for workflow in .github/workflows/release.yaml .gitea/workflows/release.yaml .forgejo/workflows/release.yaml; do
+    if [[ -f $workflow ]]; then
+      sed -i '/^          PACKAGE_REGISTRY_TOKEN: /d' "$workflow"
+    fi
+  done
+}
+
 # Replaces the README's title, badges and description, and points its usage
 # instructions at the project.
 write_readme() {
@@ -581,11 +594,21 @@ main() {
     is_library=true
     package=$(kotlin_package "$group" "$slug")
   fi
+  is_published=true
+  if ! $is_library; then
+    read -r -p 'Publish the program to the package registry? [y/N] ' reply || reply=
+    if [[ ! $reply =~ ^[Yy]([Ee][Ss])?$ ]]; then
+      is_published=false
+    fi
+  fi
 
   changes_started=true
   apply_metadata
   if $is_library; then
     make_library
+  fi
+  if ! $is_published; then
+    unpublish_package
   fi
   write_readme
   configure_providers

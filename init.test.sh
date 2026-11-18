@@ -179,8 +179,8 @@ test_application() (
   git add -A
   git commit --quiet --message 'Initial commit'
   # The build sandbox has no /usr/bin/env for the shebang
-  # GitHub (detected), application, no Gitea, Forgejo mirror, Zed, VS Code
-  printf '%s\n' '' n n y https://git.example.com/octo/hello-world '' '' | bash ./init.sh 'Hello World' "$description"
+  # GitHub (detected), application, unpublished, no Gitea, Forgejo mirror, Zed, VS Code
+  printf '%s\n' '' n n n y https://git.example.com/octo/hello-world '' '' | bash ./init.sh 'Hello World' "$description"
 
   assert_initialized com.github.octo hello-world test@example.com
   assert_eq "$(jq -r .library .template.json)" null '.template.json library'
@@ -203,6 +203,29 @@ test_application() (
     '"endpoint": "https://git.example.com/api/v1"' \
     '"repositories": ["octo/hello-world"]'
   [[ -f src/main/kotlin/Main.kt && -d .zed && -d .vscode ]] || fail 'application files are missing'
+  # The container image still needs packages: write
+  assert_contains .github/workflows/release.yaml 'packages: write' 'images.x86_64-linux.default'
+  assert_lacks .github/workflows/release.yaml PACKAGE_REGISTRY_TOKEN
+  assert_lacks .forgejo/workflows/release.yaml PACKAGE_REGISTRY_TOKEN
+  assert_contains .forgejo/workflows/release.yaml CONTAINER_REGISTRY_PASSWORD
+  assert_lacks build.gradle.kts maven-publish 'publishing {' MavenPublication
+  assert_contains build.gradle.kts 'mainClass = "MainKt"' 'dependencyLocking {' 'tasks.test {'
+)
+
+test_application_published() (
+  local project=$tmp/hello-published
+  new_project "$project" https://git.example.com/octo/hello-published.git
+  cd "$project"
+  git add -A
+  git commit --quiet --message 'Initial commit'
+  # Forgejo (detected), application, published, no GitHub, no Gitea, no Zed, no VS Code
+  printf '%s\n' '' n y n n n n | bash ./init.sh 'Hello Published' 'Says hello'
+
+  assert_initialized com.example.git.octo hello-published test@example.com
+  assert_contains .forgejo/workflows/release.yaml \
+    'PACKAGE_REGISTRY_TOKEN: ${{ secrets.PACKAGE_TOKEN }}' \
+    CONTAINER_REGISTRY_PASSWORD 'images.x86_64-linux.default'
+  assert_contains build.gradle.kts '`maven-publish`' 'publishing {' 'mainClass = "MainKt"'
 )
 
 test_library() (
@@ -310,9 +333,9 @@ test_rollback() (
 
   # Mirror URLs are read after the template has been changed
   assert_fails 'Unsupported repository URL.' \
-    bash ./init.sh Rollback Rollback < <(printf '%s\n' '' n n y ftp://git.example.com/octo/rollback)
+    bash ./init.sh Rollback Rollback < <(printf '%s\n' '' n n n y ftp://git.example.com/octo/rollback)
   assert_fails 'Gitea repository URL cannot use github.com.' \
-    bash ./init.sh Rollback Rollback < <(printf '%s\n' github n y https://github.com/octo/rollback)
+    bash ./init.sh Rollback Rollback < <(printf '%s\n' github n n y https://github.com/octo/rollback)
   assert_eq "$(git rev-parse HEAD)" "$head" HEAD
   assert_eq "$(git status --porcelain --untracked-files=all)" '' 'worktree status'
   assert_missing "$tmp"/.rollback.git-*
@@ -329,7 +352,7 @@ chmod +x "$tmp/bin/nix"
 PATH=$tmp/bin:$PATH
 
 create_upstream
-for test in test_parse_remote test_slugify test_maven_group test_kotlin_package test_nix_string test_application test_library test_library_github test_gitea test_rollback; do
+for test in test_parse_remote test_slugify test_maven_group test_kotlin_package test_nix_string test_application test_application_published test_library test_library_github test_gitea test_rollback; do
   "$test"
   printf 'ok: %s\n' "$test"
 done
