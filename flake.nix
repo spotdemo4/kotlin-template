@@ -230,8 +230,6 @@
 
         # nix flake check
         checks = pkgs.mkChecks {
-          kotlin = self.packages.${system}.default;
-
           kotlin-lint = {
             root = ./.;
             filter = file: file.hasExt "kt" || file.hasExt "kts";
