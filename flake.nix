@@ -32,12 +32,12 @@
         # nix develop [#...]
         devShells = {
           default = pkgs.mkShell {
-            shellHook = pkgs.shellhook.ref;
+            shellHook = pkgs.trev.shellhook.ref;
             packages = with pkgs; [
               # kotlin
               gradle_9
               jdk25
-              kotlin-lsp
+              trev.kotlin-lsp
               ktlint
 
               vscode-json-languageserver # json
@@ -51,19 +51,19 @@
 
               # util
               treefmt
-              bumper
+              trev.bumper
             ];
           };
 
           bump = pkgs.mkShell {
             packages = with pkgs; [
-              bumper
+              trev.bumper
             ];
           };
 
           release = pkgs.mkShell {
             packages = with pkgs; [
-              flake-release
+              trev.flake-release
               gradle_9
               jdk25
             ];
@@ -73,7 +73,7 @@
             packages = with pkgs; [
               gradle_9
               jdk25
-              renovate
+              trev.renovate
             ];
           };
 
@@ -87,7 +87,7 @@
         };
 
         # nix run [#...]
-        apps = pkgs.mkApps {
+        apps = pkgs.trev.libs.mkApps {
           update-deps = {
             packages = with pkgs; [
               gradle_9
@@ -187,14 +187,14 @@
 
         # nix build #images.[...]
         images = {
-          default = pkgs.mkImage {
+          default = pkgs.trev.libs.mkImage {
             src = self.packages.${system}.default;
           };
         };
 
         # nix build #appimages.[...]
         appimages = {
-          default = pkgs.mkAppImage {
+          default = pkgs.trev.libs.mkAppImage {
             src = self.packages.${system}.default;
           };
         };
@@ -229,7 +229,7 @@
         };
 
         # nix flake check
-        checks = pkgs.mkChecks {
+        checks = pkgs.trev.libs.mkChecks {
           kotlin-lint = {
             root = ./.;
             filter = file: file.hasExt "kt" || file.hasExt "kts";
@@ -313,7 +313,7 @@
             root = ./.github;
             files = ./.github/renovate.jsonc;
             packages = with pkgs; [
-              renovate
+              trev.renovate
             ];
             script = ''
               renovate-config-validator renovate.jsonc
@@ -324,7 +324,7 @@
             root = ./.forgejo;
             files = ./.forgejo/renovate.jsonc;
             packages = with pkgs; [
-              renovate
+              trev.renovate
             ];
             script = ''
               renovate-config-validator renovate.jsonc
@@ -335,7 +335,7 @@
             root = ./.gitea;
             files = ./.gitea/renovate.jsonc;
             packages = with pkgs; [
-              renovate
+              trev.renovate
             ];
             script = ''
               renovate-config-validator renovate.jsonc
