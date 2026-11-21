@@ -82,6 +82,24 @@ EOF
   assert_fails 'Origin URL contains unsupported host or path characters.' parse_remote 'Origin URL' 'https://github.com/octo/hello world'
 }
 
+test_check_tangled_remote() {
+  local url
+  while read -r url; do
+    check_tangled_remote "$url"
+  done <<'EOF'
+https://tangled.org/octo.example.com/hello
+https://tangled.org/@octo.example.com/hello
+git@tangled.org:octo.example.com/hello
+octo.example.com@knot.example.com:did:plc:abcdefghijklmnopqrstuvwx
+ssh://git@knot.example.com:2222/did:plc:abcdefghijklmnopqrstuvwx
+EOF
+
+  assert_fails 'Unsupported repository URL.' check_tangled_remote 'ftp://tangled.org/octo/hello'
+  assert_fails 'Unsupported repository URL.' check_tangled_remote 'https://tangled.org/octo/hello?tab=readme'
+  assert_fails 'Unsupported repository URL.' check_tangled_remote 'https://tangled.org/octo/hello world'
+  assert_fails 'Tangled repository URL cannot use github.com.' check_tangled_remote 'git@github.com:octo/hello.git'
+}
+
 test_slugify() {
   assert_eq "$(slugify 'Hello World')" hello-world 'slugify Hello World'
   assert_eq "$(slugify ' My_App 2! ')" my-app-2 'slugify My_App 2!'
@@ -179,13 +197,17 @@ test_application() (
   git add -A
   git commit --quiet --message 'Initial commit'
   # The build sandbox has no /usr/bin/env for the shebang
-  # GitHub (detected), application, unpublished, no Gitea, Forgejo mirror, Zed, VS Code,
-  # Claude Code
-  printf '%s\n' '' n n n y https://git.example.com/octo/hello-world '' '' '' | bash ./init.sh 'Hello World' "$description"
+  # GitHub (detected), application, unpublished, no Gitea, Forgejo mirror,
+  # Tangled mirror, Zed, VS Code, Claude Code
+  printf '%s\n' '' n n n y https://git.example.com/octo/hello-world \
+    y octo.example.com@knot.example.com:did:plc:abcdefghijklmnopqrstuvwx '' '' '' |
+    bash ./init.sh 'Hello World' "$description"
 
   assert_initialized com.github.octo hello-world test@example.com
   assert_eq "$(jq -r .library .template.json)" null '.template.json library'
-  assert_eq "$(git remote)" $'forgejo\norigin' remotes
+  assert_eq "$(git remote)" $'forgejo\norigin\ntangled' remotes
+  assert_eq "$(git remote get-url tangled)" octo.example.com@knot.example.com:did:plc:abcdefghijklmnopqrstuvwx 'tangled remote'
+  [[ -f .tangled/workflows/check.yaml && -f .tangled/workflows/vulnerable.yaml ]] || fail 'Tangled workflows are missing'
   assert_eq "$(head -n 1 README.md)" '# Hello World' 'README title'
   assert_contains README.md "$description" \
     'nix run git+https://github.com/octo/hello-world.git' \
@@ -221,12 +243,12 @@ test_application_published() (
   cd "$project"
   git add -A
   git commit --quiet --message 'Initial commit'
-  # Forgejo (detected), application, published, no GitHub, no Gitea, no Zed, no VS Code,
-  # no Claude Code
-  printf '%s\n' '' n y n n n n n | bash ./init.sh 'Hello Published' 'Says hello'
+  # Forgejo (detected), application, published, no GitHub, no Gitea, no Tangled,
+  # no Zed, no VS Code, no Claude Code
+  printf '%s\n' '' n y n n n n n n | bash ./init.sh 'Hello Published' 'Says hello'
 
   assert_initialized com.example.git.octo hello-published test@example.com
-  assert_missing .claude
+  assert_missing .claude .tangled
   [[ -f .agents/skills/template-sync/SKILL.md ]] || fail '.agents/skills is missing'
   assert_contains .forgejo/workflows/release.yaml \
     'PACKAGE_REGISTRY_TOKEN: ${{ secrets.PACKAGE_TOKEN }}' \
@@ -242,14 +264,17 @@ test_library() (
   chmod -x init.sh
   # The template's author keeps their maintainer entry
   git config user.email Me@Trev.xyz
-  # Forgejo (detected), library, no GitHub, no Gitea, no Zed, no VS Code,
-  # no Claude Code
-  printf '%s\n' '' y n n n n n | bash init.sh 'Hello Lib' 'Says hello'
+  # Forgejo (detected), library, no GitHub, no Gitea, Tangled mirror, no Zed, no
+  # VS Code, no Claude Code
+  printf '%s\n' '' y n n y https://tangled.org/@octo.example.com/hello-lib n n n |
+    bash init.sh 'Hello Lib' 'Says hello'
 
   assert_initialized com.example.git.octo hello-lib Me@Trev.xyz
   assert_eq "$(jq -r .library .template.json)" true '.template.json library'
   assert_contains flake.nix "maintainers = [ $old_maintainer ];"
-  assert_eq "$(git remote)" origin remotes
+  assert_eq "$(git remote)" $'origin\ntangled' remotes
+  assert_eq "$(git remote get-url tangled)" https://tangled.org/@octo.example.com/hello-lib 'tangled remote'
+  [[ -d .tangled ]] || fail '.tangled is missing'
   assert_missing .gitea
   assert_contains README.md 'logo=forgejo'
   assert_lacks flake.nix 'actions-gt = {' 'renovate-gt = {'
@@ -278,12 +303,12 @@ test_library_github() (
   cd "$project"
   git add -A
   git commit --quiet --message 'Initial commit'
-  # GitHub (detected), library, no Gitea, no Forgejo, no Zed, no VS Code,
-  # Claude Code
-  printf '%s\n' '' y n n n n y | bash ./init.sh 'Hello GitHub' 'Says hello'
+  # GitHub (detected), library, no Gitea, no Forgejo, no Tangled, no Zed, no VS
+  # Code, Claude Code
+  printf '%s\n' '' y n n n n n y | bash ./init.sh 'Hello GitHub' 'Says hello'
 
   assert_initialized com.github.octo hello-github test@example.com
-  assert_missing .forgejo .gitea
+  assert_missing .forgejo .gitea .tangled
   [[ -L .claude/skills ]] || fail '.claude/skills is missing'
   assert_contains src/main/kotlin/com/github/octo/hellogithub/Hello.kt 'package com.github.octo.hellogithub'
   assert_contains README.md 'maven("https://maven.pkg.github.com/octo/hello-github") {' \
@@ -298,14 +323,14 @@ test_gitea() (
   cd "$project"
   git add -A
   git commit --quiet --message 'Initial commit'
-  # Gitea, library, GitHub mirror, no Forgejo, no Zed, no VS Code, no Claude
-  # Code
-  printf '%s\n' Gitea y y git@github.com:octo/hello-mirror.git n n n n | bash ./init.sh 'Hello Gitea' 'Says hello'
+  # Gitea, library, GitHub mirror, no Forgejo, no Tangled, no Zed, no VS Code,
+  # no Claude Code
+  printf '%s\n' Gitea y y git@github.com:octo/hello-mirror.git n n n n n | bash ./init.sh 'Hello Gitea' 'Says hello'
 
   assert_initialized com.example.gitea.octo hello-gitea test@example.com
   assert_eq "$(git remote)" $'github\norigin' remotes
   assert_eq "$(git remote get-url github)" git@github.com:octo/hello-mirror.git 'github remote'
-  assert_missing .forgejo .zed .vscode .claude
+  assert_missing .forgejo .tangled .zed .vscode .claude
   assert_contains README.md \
     'https://gitea.example.com/octo/hello-gitea/actions?workflow=check.yaml' \
     'logo=gitea' \
@@ -346,6 +371,10 @@ test_rollback() (
     bash ./init.sh Rollback Rollback < <(printf '%s\n' '' n n n y ftp://git.example.com/octo/rollback)
   assert_fails 'Gitea repository URL cannot use github.com.' \
     bash ./init.sh Rollback Rollback < <(printf '%s\n' github n n y https://github.com/octo/rollback)
+  assert_fails 'Unsupported repository URL.' \
+    bash ./init.sh Rollback Rollback < <(printf '%s\n' '' n n n n y 'https://tangled.org/octo/roll back')
+  assert_fails 'Tangled repository URL cannot use github.com.' \
+    bash ./init.sh Rollback Rollback < <(printf '%s\n' '' n n n n y https://github.com/octo/rollback)
   assert_eq "$(git rev-parse HEAD)" "$head" HEAD
   assert_eq "$(git status --porcelain --untracked-files=all)" '' 'worktree status'
   assert_missing "$tmp"/.rollback.git-*
@@ -362,7 +391,7 @@ chmod +x "$tmp/bin/nix"
 PATH=$tmp/bin:$PATH
 
 create_upstream
-for test in test_parse_remote test_slugify test_maven_group test_kotlin_package test_nix_string test_application test_application_published test_library test_library_github test_gitea test_rollback; do
+for test in test_parse_remote test_check_tangled_remote test_slugify test_maven_group test_kotlin_package test_nix_string test_application test_application_published test_library test_library_github test_gitea test_rollback; do
   "$test"
   printf 'ok: %s\n' "$test"
 done
