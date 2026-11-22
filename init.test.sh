@@ -198,9 +198,9 @@ test_application() (
   git commit --quiet --message 'Initial commit'
   # The build sandbox has no /usr/bin/env for the shebang
   # GitHub (detected), application, unpublished, no Gitea, Forgejo mirror,
-  # Tangled mirror, Zed, VS Code, Claude Code
+  # Tangled mirror, Zed, VS Code, Claude Code, T3 Code
   printf '%s\n' '' n n n y https://git.example.com/octo/hello-world \
-    y octo.example.com@knot.example.com:did:plc:abcdefghijklmnopqrstuvwx '' '' '' |
+    y octo.example.com@knot.example.com:did:plc:abcdefghijklmnopqrstuvwx '' '' '' '' |
     bash ./init.sh 'Hello World' "$description"
 
   assert_initialized com.github.octo hello-world test@example.com
@@ -225,7 +225,7 @@ test_application() (
   assert_contains .forgejo/renovate.jsonc \
     '"endpoint": "https://git.example.com/api/v1"' \
     '"repositories": ["octo/hello-world"]'
-  [[ -f src/main/kotlin/Main.kt && -d .zed && -d .vscode ]] || fail 'application files are missing'
+  [[ -f src/main/kotlin/Main.kt && -d .zed && -d .vscode && -f t3.json ]] || fail 'application files are missing'
   assert_eq "$(git ls-files .claude)" .claude/skills 'tracked .claude files'
   assert_eq "$(readlink .claude/skills)" ../.agents/skills '.claude/skills target'
   # The container image still needs packages: write
@@ -244,11 +244,11 @@ test_application_published() (
   git add -A
   git commit --quiet --message 'Initial commit'
   # Forgejo (detected), application, published, no GitHub, no Gitea, no Tangled,
-  # no Zed, no VS Code, no Claude Code
-  printf '%s\n' '' n y n n n n n n | bash ./init.sh 'Hello Published' 'Says hello'
+  # no Zed, no VS Code, no Claude Code, no T3 Code
+  printf '%s\n' '' n y n n n n n n n | bash ./init.sh 'Hello Published' 'Says hello'
 
   assert_initialized com.example.git.octo hello-published test@example.com
-  assert_missing .claude .tangled
+  assert_missing .claude .tangled t3.json
   [[ -f .agents/skills/template-sync/SKILL.md ]] || fail '.agents/skills is missing'
   assert_contains .forgejo/workflows/release.yaml \
     'PACKAGE_REGISTRY_TOKEN: ${{ secrets.PACKAGE_TOKEN }}' \
@@ -265,8 +265,8 @@ test_library() (
   # The template's author keeps their maintainer entry
   git config user.email Me@Trev.xyz
   # Forgejo (detected), library, no GitHub, no Gitea, Tangled mirror, no Zed, no
-  # VS Code, no Claude Code
-  printf '%s\n' '' y n n y https://tangled.org/@octo.example.com/hello-lib n n n |
+  # VS Code, no Claude Code, no T3 Code
+  printf '%s\n' '' y n n y https://tangled.org/@octo.example.com/hello-lib n n n n |
     bash init.sh 'Hello Lib' 'Says hello'
 
   assert_initialized com.example.git.octo hello-lib Me@Trev.xyz
@@ -278,7 +278,7 @@ test_library() (
   assert_missing .gitea
   assert_contains README.md 'logo=forgejo'
   assert_lacks flake.nix 'actions-gt = {' 'renovate-gt = {'
-  assert_missing src/main/kotlin/Main.kt src/test/kotlin/MainTest.kt .github .zed .vscode .claude
+  assert_missing src/main/kotlin/Main.kt src/test/kotlin/MainTest.kt .github .zed .vscode .claude t3.json
   assert_contains src/main/kotlin/com/example/git/octo/hellolib/Hello.kt \
     'package com.example.git.octo.hellolib' 'fun hello(name: String): String'
   assert_contains src/test/kotlin/com/example/git/octo/hellolib/HelloTest.kt 'package com.example.git.octo.hellolib'
@@ -304,12 +304,13 @@ test_library_github() (
   git add -A
   git commit --quiet --message 'Initial commit'
   # GitHub (detected), library, no Gitea, no Forgejo, no Tangled, no Zed, no VS
-  # Code, Claude Code
-  printf '%s\n' '' y n n n n n y | bash ./init.sh 'Hello GitHub' 'Says hello'
+  # Code, Claude Code, T3 Code
+  printf '%s\n' '' y n n n n n y y | bash ./init.sh 'Hello GitHub' 'Says hello'
 
   assert_initialized com.github.octo hello-github test@example.com
   assert_missing .forgejo .gitea .tangled
   [[ -L .claude/skills ]] || fail '.claude/skills is missing'
+  [[ -f t3.json ]] || fail 't3.json is missing'
   assert_contains src/main/kotlin/com/github/octo/hellogithub/Hello.kt 'package com.github.octo.hellogithub'
   assert_contains README.md 'maven("https://maven.pkg.github.com/octo/hello-github") {' \
     'implementation("com.github.octo:hello-github:latest.release")'
@@ -324,13 +325,13 @@ test_gitea() (
   git add -A
   git commit --quiet --message 'Initial commit'
   # Gitea, library, GitHub mirror, no Forgejo, no Tangled, no Zed, no VS Code,
-  # no Claude Code
-  printf '%s\n' Gitea y y git@github.com:octo/hello-mirror.git n n n n n | bash ./init.sh 'Hello Gitea' 'Says hello'
+  # no Claude Code, no T3 Code
+  printf '%s\n' Gitea y y git@github.com:octo/hello-mirror.git n n n n n n | bash ./init.sh 'Hello Gitea' 'Says hello'
 
   assert_initialized com.example.gitea.octo hello-gitea test@example.com
   assert_eq "$(git remote)" $'github\norigin' remotes
   assert_eq "$(git remote get-url github)" git@github.com:octo/hello-mirror.git 'github remote'
-  assert_missing .forgejo .tangled .zed .vscode .claude
+  assert_missing .forgejo .tangled .zed .vscode .claude t3.json
   assert_contains README.md \
     'https://gitea.example.com/octo/hello-gitea/actions?workflow=check.yaml' \
     'logo=gitea' \
